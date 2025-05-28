@@ -8,18 +8,22 @@ class VNFPlacementProblem:
         self.E = network_data['E']
         self.F = network_data['F']
         self.R = sorted(network_data['R'], key=lambda x: x.get('T', 0))
-
+        
+        
+        # Initialize max_time based on the requests
         raw_max = max(req.get('T', 0) + req.get('d_max', 0) for req in self.R)
         self.max_time = int(raw_max) + 1
         self.time_slots = list(range(1, self.max_time + 1))
 
         self.G = nx.Graph()
         self.vm_nodes = []
+        #add nodes to the graph
         for nid, info in self.V.items():
             node = int(nid)
             self.G.add_node(node)
             if info.get('server', False):
                 self.vm_nodes.append(node)
+        #add edges to the graph
         for e in self.E:
             self.G.add_edge(e['u'], e['v'], bandwidth=e['b_l'], delay=e['d_l'])
 

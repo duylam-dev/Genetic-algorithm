@@ -6,7 +6,7 @@ from vnf_ploblem import VNFPlacementProblem
 
 
 # NSGA-II setup
-
+# create fitness class and individual class
 def setup_nsga2():
     if hasattr(creator, 'FitnessMulti'):
         del creator.FitnessMulti
@@ -45,8 +45,11 @@ def mutate_individual(ind, problem):
 # Run NSGA-II
 
 def run_nsga2(network_data, pop_size=50, gen=100):
+    # Initialize the problem instance
     problem = VNFPlacementProblem(network_data)
+    # Setup DEAP NSGA-II components
     setup_nsga2()
+    # Create DEAP toolbox
     toolbox = base.Toolbox()
     toolbox.register('individual', lambda: creator.Individual(problem.create_individual()))
     toolbox.register('population', tools.initRepeat, list, toolbox.individual)
@@ -55,16 +58,18 @@ def run_nsga2(network_data, pop_size=50, gen=100):
     toolbox.register('mutate', lambda ind: mutate_individual(ind, problem))
     toolbox.register('select', tools.selNSGA2)
 
+    # Create initial population
     pop = toolbox.population(n=pop_size)
     invalid = [ind for ind in pop if not ind.fitness.valid]
+    # Evaluate the initial population
     for ind in invalid:
         ind.fitness.values = toolbox.evaluate(ind)
-
+    # Initialize hall of fame and statistics
     hof = tools.ParetoFront()
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register('avg', np.mean, axis=0)
     stats.register('min', np.min, axis=0)
-
+    # Run the NSGA-II algorithm
     for g in range(gen):
         offspring = algorithms.varAnd(pop, toolbox, cxpb=0.8, mutpb=0.2)
         invalid = [ind for ind in offspring if not ind.fitness.valid]
@@ -78,9 +83,12 @@ def run_nsga2(network_data, pop_size=50, gen=100):
 # Main
 
 def main():
+    #load data
     with open('cogent_centers_easy_s1.json') as f:
         data = json.load(f)
+    # Run NSGA-II
     pop, hof, prob = run_nsga2(data, pop_size=30, gen=50)
+    # Save results
     with open('vnf_time_aware_output.txt', 'w') as f:
         f.write(f'Found {len(hof)} Pareto solutions\n')
         for i, ind in enumerate(hof):
