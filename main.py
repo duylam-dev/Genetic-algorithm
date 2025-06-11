@@ -131,7 +131,7 @@ def main():
     with open('input/input_25/cogent_centers_easy_s2.json') as f:
         data = json.load(f)
     # Run NSGA-II
-    pop, hof, prob = run_nsga2(data, pop_size=30, gen=300)
+    pop, hof, prob = run_nsga2(data, pop_size=30, gen=100)
     metrics = evaluate_pareto_front(hof)
     # Save results
     with open('vnf_time_aware_output.txt', 'w') as f:

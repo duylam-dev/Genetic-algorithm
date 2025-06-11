@@ -135,17 +135,17 @@ class VNFPlacementProblem:
                         cpu_usage[t][vm_node] += info_f['c_f']
                     t_cursor += d_proc
                 if 'd_max' in r and dly > r['d_max']:
-                    penalty += (dly - r['d_max']) * 1000
+                    penalty += (dly - r['d_max']) * 100
 
         for t in self.time_slots:
             for vm in self.vm_nodes:
                 cap = self.V[str(vm)]['c_v']
                 if cpu_usage[t][vm] > cap:
-                    penalty += (cpu_usage[t][vm]-cap)*1000
+                    penalty += (cpu_usage[t][vm]-cap)*100
             for (u,v), used in bw_usage[t].items():
                 cap = self.G[u][v]['bandwidth']
                 if used > cap:
-                    penalty += (used-cap)*1000
+                    penalty += (used-cap)*100
 
         avg_delay = (total_delay/cnt) if cnt>0 else 0
         return total_cost+penalty, -accepted, avg_delay
