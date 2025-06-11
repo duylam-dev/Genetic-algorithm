@@ -3,6 +3,7 @@ import random
 import numpy as np
 from deap import algorithms, base, creator, tools
 from vnf_ploblem import VNFPlacementProblem
+from visualize import plot_pareto_2d, draw_network_graph
 
 
 # NSGA-II setup
@@ -44,9 +45,10 @@ def mutate_individual(ind, problem):
 
 # Run NSGA-II
 
-def run_nsga2(network_data, pop_size=50, gen=100):
+def run_nsga2(network_data, pop_size=50, gen=30):
     # Initialize the problem instance
     problem = VNFPlacementProblem(network_data)
+    draw_network_graph(problem, filename='network_graph.png')
     # Setup DEAP NSGA-II components
     setup_nsga2()
     # Create DEAP toolbox
@@ -60,8 +62,8 @@ def run_nsga2(network_data, pop_size=50, gen=100):
 
     # Create initial population
     pop = toolbox.population(n=pop_size)
-    invalid = [ind for ind in pop if not ind.fitness.valid]
     # Evaluate the initial population
+    invalid = [ind for ind in pop if not ind.fitness.valid]
     for ind in invalid:
         ind.fitness.values = toolbox.evaluate(ind)
     # Initialize hall of fame and statistics
@@ -80,14 +82,57 @@ def run_nsga2(network_data, pop_size=50, gen=100):
         record = stats.compile(pop)
     return pop, hof, problem
 
+
+
+
+# Evaluation Metrics for Pareto Front
+def evaluate_pareto_front(hof):
+    if len(hof) < 2:
+        return {
+            'Cardinality': len(hof),
+            'Spacing': None,
+            'Spread': None,
+            'Convergence': None
+        }
+
+    fitnesses = np.array([ind.fitness.values for ind in hof])
+    cardinality = len(hof)
+
+    # Spacing
+    distances = []
+    for i in range(len(fitnesses)):
+        dists = [np.linalg.norm(fitnesses[i] - fitnesses[j]) for j in range(len(fitnesses)) if i != j]
+        distances.append(min(dists))
+    spacing = np.std(distances)
+
+    # Spread (Δ - Spread metric)
+    df = fitnesses - fitnesses.min(axis=0)
+    ideal = np.zeros(fitnesses.shape[1])  # Assuming minimization problem
+    d_f = np.max(np.linalg.norm(fitnesses - ideal, axis=1))
+    d_l = np.min(np.linalg.norm(fitnesses - ideal, axis=1))
+    mean_dist = np.mean(distances)
+    spread = (d_f + d_l + sum(abs(d - mean_dist) for d in distances)) / (d_f + d_l + (len(distances) * mean_dist))
+
+    # Convergence: distance to ideal point (0,0,0)
+    convergence = np.mean(np.linalg.norm(fitnesses - ideal, axis=1))
+
+    return {
+        'Cardinality': cardinality,
+        'Spacing': spacing,
+        'Spread': spread,
+        'Convergence': convergence
+    }
+
+
 # Main
 
 def main():
     #load data
-    with open('cogent_centers_easy_s1.json') as f:
+    with open('input/input_25/cogent_centers_easy_s2.json') as f:
         data = json.load(f)
     # Run NSGA-II
-    pop, hof, prob = run_nsga2(data, pop_size=30, gen=50)
+    pop, hof, prob = run_nsga2(data, pop_size=30, gen=300)
+    metrics = evaluate_pareto_front(hof)
     # Save results
     with open('vnf_time_aware_output.txt', 'w') as f:
         f.write(f'Found {len(hof)} Pareto solutions\n')
@@ -102,6 +147,10 @@ def main():
             f.write(f"y_r: {sol['y']}\n")
             f.write(f"z (routes): {sol['route']}\n")
             f.write(f"tau: {sol['tau']}\n")
+        f.write('\n=== Pareto Front Metrics ===\n')
+        for key, value in metrics.items():
+            f.write(f'{key}: {value}\n')
+    plot_pareto_2d(hof)
 
 if __name__ == '__main__':
     main()
